@@ -1,0 +1,116 @@
+<!-- templates/myapp/simple_graph.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Simple RDF Graph</title>
+    <style>
+      /* Make the SVG fill the entire viewport */
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+      svg {
+        width: 100vw;
+        height: 100vh;
+        background-color: #fafafa;
+      }
+      .link {
+        stroke: #999;
+        stroke-opacity: 0.6;
+      }
+      .node circle {
+        stroke: #333;
+        stroke-width: 1px;
+        fill: #69b3a2;
+      }
+      .node text {
+        font-size: 10px;
+        pointer-events: none;
+      }
+    </style>
+</head>
+<body>
+    <!-- 1) SVG container -->
+    <svg id="rdf-graph"></svg>
+
+    <!-- 2) Load D3 from CDN (version 6+) -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+
+    <script>
+    // 3) Parse the JSON data passed from Django
+    const graph = JSON.parse('{{ graph_json|escapejs }}');
+    // graph.nodes is an array of {id: "..."} 
+    // graph.links is an array of {source: "...", target: "...", predicate: "..."}
+
+    // 4) Select the SVG and set up width/height
+    const svg = d3.select("#rdf-graph");
+    const width = +svg.attr("width") || window.innerWidth;
+    const height = +svg.attr("height") || window.innerHeight;
+
+    // 5) Initialize a force simulation
+    const simulation = d3.forceSimulation(graph.nodes)
+        .force("link", d3.forceLink(graph.links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-200))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    // 6) Draw links (as lines)
+    const link = svg.append("g")
+        .attr("class", "links")
+      .selectAll("line")
+      .data(graph.links)
+      .enter().append("line")
+        .attr("class", "link")
+        .attr("stroke-width", 1);
+
+    // 7) Draw nodes (as groups containing circle + text)
+    const node = svg.append("g")
+        .attr("class", "nodes")
+      .selectAll("g")
+      .data(graph.nodes)
+      .enter().append("g")
+        .attr("class", "node");
+
+    node.append("circle")
+        .attr("r", 8);
+
+    node.append("text")
+        .attr("x", 12)
+        .attr("y", 3)
+        .text(d => {
+            // Optionally shorten the URI for display: take substring after last '/'
+            const parts = d.id.split("/");
+            return parts[parts.length - 1];
+        });
+
+    // 8) Tick function to update positions each iteration
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
+      node
+        .attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    // 9) Optional: allow dragging nodes
+    node.call(d3.drag()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        }));
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GraphDB Data</title>
+</head>
+<body>
+    <h1>GraphDB Triples</h1>
+    <table border="1">
+        <tr>
+            <th>Subject</th>
+            <th>Predicate</th>
+            <th>Object</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.subject.value }}</td>
+            <td>{{ row.predicate.value }}</td>
+            <td>{{ row.object.value }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
